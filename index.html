@@ -1,0 +1,1772 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FLOAT</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700&display=swap');
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      min-height: 100svh;
+      background: #000;
+    }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    /* 只负责居中定位，不改变 FLOAT 本身样式 */
+    .float-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      min-height: 100svh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 0;
+    }
+    /* Intro hero: fixed + flex true-centering (isolated) */
+    .hero-screen {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      min-height: 100svh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      opacity: 1;
+      filter: blur(0px);
+      transition: opacity 550ms ease, filter 550ms ease;
+    }
+    .hero-screen.is-leaving {
+      opacity: 0;
+      filter: blur(8px);
+    }
+    .hero-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      width: 100%;
+      pointer-events: none;
+    }
+    .hero-title {
+      text-align: center;
+      margin: 0 auto;
+      font-size: clamp(56px, 18vw, 192px);
+      white-space: nowrap;
+    }
+    .intro-tap-hint {
+      margin-top: 28px;
+      font-size: 14px;
+      letter-spacing: 0.12em;
+      opacity: 0.6;
+      color: rgba(255, 255, 255, 0.5);
+      animation: introHintBreath 3.2s ease-in-out infinite;
+      white-space: nowrap;
+    }
+    @keyframes introHintBreath {
+      0%, 100% { opacity: 0.14; }
+      50% { opacity: 0.26; }
+    }
+    /* (legacy) keep animations unused for now */
+    .flow-stage {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding-top: 18vh;
+      padding: 0 24px;
+      opacity: 0;
+      transition: opacity 800ms ease, transform 800ms ease;
+      transition-delay: 150ms;
+      pointer-events: none;
+      will-change: opacity, transform;
+    }
+    .flow-stage.is-active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .flow-stack {
+      width: 100%;
+      max-width: 520px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .flow-headline {
+      text-align: center;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-weight: 200;
+      letter-spacing: 0.04em;
+      line-height: 1.3;
+      color: rgba(255, 255, 255, 0.84);
+      margin: 0;
+      padding: 0 14px;
+      text-shadow: 0 0 18px rgba(255, 255, 255, 0.12);
+      filter: blur(0.1px);
+    }
+    .flow-card-wrap {
+      width: 100%;
+      margin-top: 42px;
+    }
+    .flow-card {
+      width: 100%;
+      max-width: 620px;
+      margin: 0 auto;
+      border-radius: 34px;
+      padding: 34px 30px;
+      background: rgba(10, 10, 10, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      min-height: 340px;
+      display: flex;
+      flex-direction: column;
+    }
+    .flow-question {
+      min-height: 96px;
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+    .flow-options {
+      margin-top: 28px;
+      gap: 14px;
+    }
+    .flow-option {
+      border-radius: 24px;
+      padding: 16px 20px;
+      min-height: 56px;
+      display: flex;
+      align-items: center;
+      transition: box-shadow 280ms ease, background 280ms ease, border-color 280ms ease;
+    }
+    .flow-options--list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .flow-options--grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-auto-rows: minmax(56px, auto);
+      gap: 14px;
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .flow-option:hover {
+        background: rgba(255, 255, 255, 0.09);
+        border-color: rgba(255, 255, 255, 0.24);
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.09);
+      }
+    }
+    @media (min-width: 768px) {
+      .flow-headline { font-size: 38px; }
+    }
+    @media (max-width: 767px) {
+      .flow-stage { padding: 0 18px; }
+      .flow-stack {
+        max-width: 90vw;
+        transform: none;
+      }
+      .flow-headline {
+        font-size: 28px;
+        letter-spacing: 0.11em;
+      }
+      .flow-card-wrap { margin-top: 42px; }
+      .flow-card {
+        max-width: 90vw;
+        padding: 28px 22px;
+        border-radius: 30px;
+        min-height: 340px;
+      }
+      .flow-options { gap: 12px; }
+      .flow-option { padding: 15px 18px; min-height: 54px; }
+      .flow-question { min-height: 88px; }
+    }
+    .particle-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .float-brand-outline {
+      font-weight: 100;
+      letter-spacing: 0.4em;
+      -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.9);
+      color: transparent;
+      animation: fadeInUp 1.5s ease-out;
+      text-shadow: 0 0 40px rgba(255, 255, 255, 0.3);
+      width: 100%;
+      text-align: center;
+    }
+
+    .glass-panel {
+      background: rgba(10, 10, 10, 0.18);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+    }
+
+    .video-background {
+      filter: blur(12px) brightness(0.6) saturate(0.7);
+      -webkit-filter: blur(12px) brightness(0.6) saturate(0.7);
+      transform: scale(1.1);
+      position: fixed;
+      z-index: -1;
+    }
+
+    .fade-in-slow { animation: fadeIn 1.4s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+    .intro-float-dissolve { animation: floatDissolve 2.0s ease-in-out forwards; }
+    @keyframes floatDissolve {
+      0% { opacity: 1; filter: blur(0px); transform: translateY(0) scale(1); letter-spacing: 0.4em; }
+      55% { opacity: 0.55; filter: blur(6px); transform: translateY(-6px) scale(1.01); letter-spacing: 0.55em; }
+      100% { opacity: 0; filter: blur(14px); transform: translateY(-10px) scale(1.02); letter-spacing: 0.7em; }
+    }
+
+    .intro-question-in { animation: questionIn 1.6s ease-out forwards; }
+    @keyframes questionIn {
+      0% { opacity: 0; filter: blur(10px); transform: translateY(10px); }
+      100% { opacity: 1; filter: blur(0px); transform: translateY(0); }
+    }
+
+    .clickable-text {
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .clickable-text:active { transform: scale(0.99); }
+
+    .fade-swap-in { animation: fadeSwapIn 1.2s ease-out both; }
+    .fade-swap-out { animation: fadeSwapOut 0.7s ease-in both; }
+    @keyframes fadeSwapIn {
+      0% { opacity: 0; filter: blur(10px); transform: translateY(10px); }
+      100% { opacity: 1; filter: blur(0px); transform: translateY(0); }
+    }
+    @keyframes fadeSwapOut {
+      0% { opacity: 1; filter: blur(0px); transform: translateY(0); }
+      100% { opacity: 0; filter: blur(10px); transform: translateY(-6px); }
+    }
+
+    .option-line {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+    .question-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 40px;
+      padding: 10px 12px;
+      margin: -8px 0 4px -12px;
+      border: none;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.46);
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      font-weight: 300;
+      cursor: pointer;
+      border-radius: 999px;
+      transition: color 260ms ease, opacity 260ms ease, background 260ms ease, transform 260ms ease;
+    }
+    .question-back-arrow {
+      font-size: 15px;
+      line-height: 1;
+      transform: translateY(-0.5px);
+      opacity: 0.9;
+    }
+    .question-back-label {
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .question-back:hover,
+      .question-back:focus-visible {
+        color: rgba(255, 255, 255, 0.76);
+        background: rgba(255, 255, 255, 0.06);
+        outline: none;
+      }
+    }
+    .question-back:active {
+      transform: translateY(0.5px);
+      color: rgba(255, 255, 255, 0.82);
+    }
+
+    /* loading 文案更柔和的淡入淡出（不改布局） */
+    .loading-fade {
+      transition: opacity 550ms ease, filter 550ms ease, transform 550ms ease;
+    }
+    .loading-fade.is-hidden {
+      opacity: 0;
+      filter: blur(8px);
+      transform: translateY(6px);
+    }
+    .loading-fade.is-visible {
+      opacity: 1;
+      filter: blur(0px);
+      transform: translateY(0);
+    }
+
+    /* 4 选项：保持极简且不“表单化” */
+    .option-grid-2x2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    /* Result page — cinematic, breathable, layered */
+    .result-scene {
+      width: 100%;
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 0 28px 18vh;
+      position: relative;
+    }
+    @media (min-width: 768px) {
+      .result-scene { padding-top: 12vh; }
+    }
+    @media (max-width: 767px) {
+      .result-scene {
+        padding: 11vh 24px 20vh;
+      }
+    }
+
+    .result-title {
+      text-align: center;
+      font-weight: 200;
+      letter-spacing: 0.18em;
+      line-height: 1.05;
+      margin: 0;
+      padding: 0;
+      opacity: 0;
+      animation: titleFadeIn 1200ms ease-out 120ms forwards;
+    }
+    @keyframes titleFadeIn {
+      from { opacity: 0; transform: translateY(10px); filter: blur(10px); }
+      to { opacity: 1; transform: translateY(0); filter: blur(0px); }
+    }
+    @media (min-width: 768px) {
+      .result-title { font-size: 64px; }
+    }
+    @media (max-width: 767px) {
+      .result-title { font-size: 42px; }
+    }
+
+    .result-core {
+      text-align: center;
+      opacity: 0.78;
+      margin-top: 22px;
+      line-height: 1.55;
+      animation: softRise 900ms ease-out 220ms both;
+    }
+    @keyframes softRise {
+      from { opacity: 0; transform: translateY(8px); filter: blur(8px); }
+      to { opacity: 0.78; transform: translateY(0); filter: blur(0px); }
+    }
+
+    .result-stack {
+      position: relative;
+      margin-top: 26px;
+    }
+    .result-dialogue {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 90px;
+      align-items: start;
+      column-gap: 48px;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .result-main-copy {
+      min-width: 0;
+    }
+
+    .result-ghost {
+      position: absolute;
+      left: 50%;
+      top: 52%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      user-select: none;
+      font-weight: 300;
+      letter-spacing: 0.12em;
+      opacity: 0.04;
+      filter: blur(1.2px);
+      white-space: nowrap;
+      z-index: 0;
+    }
+    @media (min-width: 768px) {
+      .result-ghost { font-size: 120px; }
+    }
+    @media (max-width: 767px) {
+      .result-ghost { font-size: 72px; }
+    }
+
+    .result-body {
+      position: relative;
+      z-index: 1;
+      max-width: 100%;
+      margin: 0;
+      text-align: left;
+      line-height: 2;
+      opacity: 0.72;
+    }
+    .result-body p {
+      margin: 0 0 28px 0;
+      white-space: pre-line;
+    }
+    @media (min-width: 768px) {
+      .result-body { font-size: 17px; }
+      .result-core { font-size: 20px; }
+    }
+    @media (max-width: 767px) {
+      .result-body {
+        font-size: 15.5px;
+        max-width: 100%;
+        line-height: 2.06;
+      }
+      .result-core { font-size: 18px; }
+    }
+
+    .resonance-side {
+      position: relative;
+      width: 90px;
+      margin-top: 6px;
+    }
+    .resonance-info-wrap {
+      position: relative;
+      width: 100%;
+      display: block;
+    }
+    .resonance-card {
+      width: 100%;
+      border-radius: 16px;
+      padding: 12px 10px 11px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      text-align: center;
+    }
+    .resonance-pct {
+      font-size: 30px;
+      line-height: 1;
+      font-weight: 300;
+      color: rgba(255, 255, 255, 0.94);
+      letter-spacing: 0.02em;
+    }
+    .resonance-inline-label {
+      margin-top: 7px;
+      font-size: 11px;
+      line-height: 1.45;
+      letter-spacing: 0.03em;
+      color: rgba(255, 255, 255, 0.72);
+    }
+    .resonance-static-note {
+      margin-top: 14px;
+      margin-left: 50%;
+      transform: translateX(-50%);
+      width: 280px;
+      max-width: min(280px, calc(100vw - 48px));
+      text-align: center;
+      font-size: 12px;
+      line-height: 1.75;
+      letter-spacing: 0.02em;
+      color: rgba(255, 255, 255, 0.48);
+      white-space: pre-line;
+    }
+
+    @media (max-width: 767px) {
+      .result-dialogue {
+        grid-template-columns: 1fr;
+        row-gap: 20px;
+      }
+      .resonance-side {
+        width: 78px;
+        margin-left: auto;
+        margin: 20px auto 0;
+        width: auto;
+      }
+      .resonance-card {
+        padding: 10px 8px 9px;
+      }
+      .resonance-pct {
+        font-size: 24px;
+      }
+      .resonance-inline-label {
+        font-size: 10px;
+      }
+      .resonance-static-note {
+        max-width: calc(100vw - 48px);
+        font-size: 11.5px;
+      }
+      .resonance-info-wrap {
+        max-width: 120px;
+        margin: 0 auto;
+      }
+    }
+    .suggestion-card {
+      margin: 36px auto 0;
+      width: 100%;
+      max-width: 560px;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 24px;
+      padding: 28px;
+      animation: softRise 1000ms ease-out 420ms both;
+    }
+    @media (min-width: 768px) {
+      .suggestion-card {
+        width: 78%;
+        margin-top: 40px;
+      }
+    }
+    @media (max-width: 767px) {
+      .suggestion-card {
+        margin-top: 40px;
+        max-width: 100%;
+        padding: 24px 22px;
+      }
+    }
+
+    .suggestion-label {
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 0.35em;
+      opacity: 0.45;
+      font-size: 11px;
+      margin-bottom: 14px;
+    }
+
+    .suggestion-text {
+      text-align: center;
+      margin: 0 auto;
+      max-width: 420px;
+      opacity: 0.72;
+      line-height: 1.95;
+      white-space: pre-line;
+    }
+    @media (min-width: 768px) {
+      .suggestion-text { font-size: 16px; }
+    }
+    @media (max-width: 767px) {
+      .suggestion-text { font-size: 15px; }
+    }
+
+    .rewind-wrap {
+      margin-top: 6vh;
+      text-align: center;
+      opacity: 0.42;
+      padding-bottom: 7vh;
+    }
+    @media (max-width: 767px) {
+      .rewind-wrap {
+        margin-top: 5vh;
+        padding-bottom: 9vh;
+      }
+    }
+    .rewind-line {
+      font-weight: 200;
+      line-height: 1.75;
+      opacity: 0.55;
+    }
+    .rewind-line + .rewind-line {
+      margin-top: 1.15em;
+    }
+    .rewind-heat {
+      display: inline-block;
+      cursor: pointer;
+      transition: text-shadow 320ms ease, opacity 320ms ease, color 320ms ease, transform 320ms ease;
+    }
+    /* English: quiet, still clearly tappable */
+    .rewind-heat--en {
+      color: rgba(255, 255, 255, 0.72);
+      font-weight: 500;
+      opacity: 0.88;
+      text-shadow: none;
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .rewind-heat--en:hover {
+        color: rgba(255, 255, 255, 0.92);
+        opacity: 1;
+        transform: translateY(-0.5px);
+      }
+    }
+    /* 「时间回溯」 — readable as tappable, still cinematic */
+    @keyframes rewindZhPulse {
+      0%,
+      100% {
+        text-shadow: 0 0 14px rgba(255, 255, 255, 0.32), 0 0 32px rgba(255, 255, 255, 0.1);
+        filter: brightness(1);
+      }
+      50% {
+        text-shadow: 0 0 22px rgba(255, 255, 255, 0.48), 0 0 48px rgba(255, 255, 255, 0.14);
+        filter: brightness(1.05);
+      }
+    }
+
+    .rewind-heat--zh {
+      color: #fff;
+      font-weight: 600;
+      opacity: 1;
+      text-shadow: 0 0 16px rgba(255, 255, 255, 0.38), 0 0 36px rgba(255, 255, 255, 0.12);
+      text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
+      animation: rewindZhPulse 4.2s ease-in-out infinite;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .rewind-heat--zh:hover {
+        text-decoration: underline;
+        text-decoration-color: rgba(255, 255, 255, 0.5);
+        text-underline-offset: 0.28em;
+        text-shadow: 0 0 24px rgba(255, 255, 255, 0.55), 0 0 52px rgba(255, 255, 255, 0.16);
+        transform: translateY(-0.5px);
+      }
+    }
+
+    .rewind-heat--zh:active {
+      filter: brightness(1.14);
+    }
+  </style>
+</head>
+<body class="min-h-screen overflow-hidden">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useEffect, useRef, useState } = React;
+
+    function easeInOutCubic(t) {
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+    function lerp(a, b, t) {
+      return a + (b - a) * t;
+    }
+    function mulberry32(seed) {
+      let t = seed >>> 0;
+      return function () {
+        t += 0x6D2B79F5;
+        let r = Math.imul(t ^ (t >>> 15), 1 | t);
+        r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+        return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function buildTextPoints({
+      text,
+      fontFamily,
+      fontWeight,
+      fontSizePx,
+      letterSpacingEm,
+      width,
+      height,
+      sampleGapPx,
+      centerOffsetXPx = 0,
+      centerOffsetYPx = 0,
+    }) {
+      const off = document.createElement("canvas");
+      off.width = Math.max(1, Math.floor(width));
+      off.height = Math.max(1, Math.floor(height));
+      const ctx = off.getContext("2d");
+      ctx.clearRect(0, 0, off.width, off.height);
+
+      ctx.fillStyle = "#ffffff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = `${fontWeight} ${fontSizePx}px ${fontFamily}`;
+
+      const chars = Array.from(text);
+      const spacingPx = letterSpacingEm * fontSizePx;
+      const measures = chars.map((c) => ctx.measureText(c).width);
+      const total =
+        measures.reduce((sum, w) => sum + w, 0) +
+        spacingPx * Math.max(0, chars.length - 1);
+
+      let x = off.width / 2 - total / 2 + centerOffsetXPx;
+      const y = off.height / 2 + centerOffsetYPx;
+      for (let i = 0; i < chars.length; i++) {
+        const w = measures[i];
+        ctx.fillText(chars[i], x + w / 2, y);
+        x += w + spacingPx;
+      }
+
+      const img = ctx.getImageData(0, 0, off.width, off.height).data;
+      const pts = [];
+      for (let py = 0; py < off.height; py += sampleGapPx) {
+        for (let px = 0; px < off.width; px += sampleGapPx) {
+          const a = img[(py * off.width + px) * 4 + 3];
+          if (a > 40) pts.push({ x: px, y: py });
+        }
+      }
+      return pts;
+    }
+
+    function ParticleMorph({ startDelayMs = 5000, toText, onReady }) {
+      const canvasRef = useRef(null);
+      const rafRef = useRef(null);
+      const startRef = useRef(null);
+      const stageRef = useRef("idle"); // idle -> disperse -> morph -> ready
+      const pointsRef = useRef({ from: [], to: [] });
+      const particlesRef = useRef([]);
+      const sizeRef = useRef({ w: 0, h: 0, dpr: 1 });
+      const readyCalledRef = useRef(false);
+
+      useEffect(() => {
+        let mounted = true;
+
+        const setup = async () => {
+          if (document.fonts && document.fonts.ready) {
+            try { await document.fonts.ready; } catch (_) {}
+          }
+          if (!mounted) return;
+
+          const canvas = canvasRef.current;
+          if (!canvas) return;
+          const ctx = canvas.getContext("2d");
+
+          const resize = () => {
+            const dpr = Math.min(2, window.devicePixelRatio || 1);
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            sizeRef.current = { w, h, dpr };
+            canvas.width = Math.floor(w * dpr);
+            canvas.height = Math.floor(h * dpr);
+            canvas.style.width = `${w}px`;
+            canvas.style.height = `${h}px`;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            const isDesktop = w >= 768;
+            const fontSizeFloat = isDesktop ? 192 : 128; // 12rem / 8xl
+            // 恢复问题句原始层级：text-3xl(30px) / md:text-4xl(36px)
+            const fontSizeQ = isDesktop ? 36 : 30;
+            const gap = isDesktop ? 6 : 5;
+
+            // 光学居中微调：向右一点点（解决你看到的偏左）
+            const centerOffsetXPx = w * 0.006;
+
+            const fromPts = buildTextPoints({
+              text: "FLOAT",
+              fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+              fontWeight: 100,
+              fontSizePx: fontSizeFloat,
+              letterSpacingEm: 0.4,
+              width: w,
+              height: h,
+              sampleGapPx: gap,
+              centerOffsetXPx,
+            });
+
+            const toPts = buildTextPoints({
+              text: toText,
+              fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+              fontWeight: 200,
+              fontSizePx: fontSizeQ,
+              letterSpacingEm: 0.03,
+              width: w,
+              height: h,
+              sampleGapPx: gap,
+              centerOffsetXPx,
+              centerOffsetYPx: fontSizeFloat * 0.36, // 形成句子在标题下方的视觉位置
+            });
+
+            pointsRef.current = { from: fromPts, to: toPts };
+
+            const count = Math.max(fromPts.length, toPts.length, 900);
+            const rand = mulberry32(1337);
+            const particles = [];
+            for (let i = 0; i < count; i++) {
+              const p = fromPts[i % fromPts.length] || { x: w / 2, y: h / 2 };
+              particles.push({
+                x: p.x,
+                y: p.y,
+                vx: 0,
+                vy: 0,
+                phase: rand() * Math.PI * 2,
+                freq: lerp(0.22, 0.52, rand()),
+                amp: lerp(0.6, 1.8, rand()),
+                driftX: (rand() - 0.5) * 18,
+                driftY: (rand() - 0.5) * 12,
+              });
+            }
+            particlesRef.current = particles;
+          };
+
+          resize();
+          window.addEventListener("resize", resize);
+
+          const tick = (ts) => {
+            if (!startRef.current) startRef.current = ts;
+            const elapsed = ts - startRef.current;
+
+            if (elapsed >= startDelayMs && stageRef.current === "idle") {
+              stageRef.current = "disperse";
+            }
+
+            const disperseStart = startDelayMs;
+            const disperseDur = 1600; // 更慢、更自然
+            const morphStart = disperseStart + disperseDur;
+            const morphDur = 2800;
+
+            if (elapsed >= morphStart && stageRef.current === "disperse") {
+              stageRef.current = "morph";
+            }
+            if (elapsed >= morphStart + morphDur && stageRef.current === "morph") {
+              stageRef.current = "ready";
+              if (!readyCalledRef.current) {
+                readyCalledRef.current = true;
+                if (onReady) onReady();
+              }
+            }
+
+            const { w, h } = sizeRef.current;
+            ctx.clearRect(0, 0, w, h);
+
+            const { from: fromPts, to: toPts } = pointsRef.current;
+            const parts = particlesRef.current;
+
+            const time = ts * 0.001;
+            const flowX = Math.sin(time * 0.35) * 0.10;
+            const flowY = Math.cos(time * 0.28) * 0.07;
+
+            ctx.fillStyle = "rgba(255,255,255,0.62)";
+            for (let i = 0; i < parts.length; i++) {
+              const part = parts[i];
+              const base = fromPts[i % fromPts.length] || { x: w / 2, y: h / 2 };
+              const target = toPts[i % toPts.length] || { x: w / 2, y: h / 2 };
+
+              let tx = base.x;
+              let ty = base.y;
+
+              if (stageRef.current === "idle") {
+                tx = base.x;
+                ty = base.y;
+              } else if (stageRef.current === "disperse") {
+                const t = Math.min(1, Math.max(0, (elapsed - disperseStart) / disperseDur));
+                const e = easeInOutCubic(t);
+                tx = base.x + part.driftX * e;
+                ty = base.y + part.driftY * e;
+              } else {
+                const t = Math.min(1, Math.max(0, (elapsed - morphStart) / morphDur));
+                const e = easeInOutCubic(t);
+                const sx = base.x + part.driftX;
+                const sy = base.y + part.driftY;
+                tx = lerp(sx, target.x, e);
+                ty = lerp(sy, target.y, e);
+              }
+
+              const wobble = Math.sin(time * part.freq + part.phase) * part.amp;
+              const wobble2 = Math.cos(time * (part.freq * 0.9) + part.phase) * (part.amp * 0.7);
+
+              const k = stageRef.current === "idle" ? 0.12 : 0.08;
+              const damp = 0.83;
+              const ax = (tx - part.x) * k + flowX;
+              const ay = (ty - part.y) * k + flowY;
+              part.vx = (part.vx + ax) * damp;
+              part.vy = (part.vy + ay) * damp;
+              part.x += part.vx + wobble * 0.05;
+              part.y += part.vy + wobble2 * 0.05;
+
+              const r = 1.0 + (Math.sin(time * 0.6 + part.phase) + 1) * 0.25;
+              ctx.beginPath();
+              ctx.arc(part.x, part.y, r, 0, Math.PI * 2);
+              ctx.fill();
+            }
+
+            rafRef.current = requestAnimationFrame(tick);
+          };
+
+          rafRef.current = requestAnimationFrame(tick);
+
+          return () => {
+            window.removeEventListener("resize", resize);
+          };
+        };
+
+        setup();
+
+        return () => {
+          mounted = false;
+          if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        };
+      }, [startDelayMs, toText, onReady]);
+
+      return <canvas ref={canvasRef} className="particle-canvas" />;
+    }
+
+    const TEXT = {
+      en: {
+        intro: "What's on your mind?",
+        signals: {
+          DRIFT: "DRIFT",
+          TENSION: "TENSION",
+          FLOW: "FLOW",
+          PULL: "PULL",
+        },
+        messages: {
+          DRIFT: "You don’t need to decide this yet. Not everything unclear is wrong.",
+          TENSION: "Something here already feels tight. You’ve been holding it longer than you think.",
+          FLOW: "Not everything needs to be pushed. Some things are already moving.",
+          PULL: "Something in you already leans one way. You just haven’t named it.",
+        },
+        endTitle: "stay here for a moment.",
+        endSub: "(you can refresh to begin again.)",
+      },
+      zh: {
+        intro: "你在想什么？",
+        signals: {
+          DRIFT: "漂移",
+          TENSION: "张力",
+          FLOW: "流动",
+          PULL: "牵引",
+        },
+        messages: {
+          DRIFT: "你不需要现在就做决定。并非所有不清晰都是错误。",
+          TENSION: "这里已经有些紧绷。你承受它的时间，可能比你以为的更久。",
+          FLOW: "并非所有事都需要推动。有些东西已经在移动。",
+          PULL: "你心里已有一个方向。只是你还没把它说出来。",
+        },
+        endTitle: "先停在这里一会儿。",
+        endSub: "（如果你愿意，可以刷新后重新开始。）",
+      },
+    };
+
+    const QUESTIONS = [
+      {
+        id: "q1",
+        en: "What is the thing on your mind most related to?",
+        zh: "你正在想的事情，更接近于哪一类？",
+        layout: "grid4",
+        options: [
+          { en: "Family", zh: "家庭" },
+          { en: "Career", zh: "事业" },
+          { en: "Love", zh: "爱情" },
+          { en: "Nothing really, just looking around", zh: "什么也没有，只是随便看看" },
+        ],
+      },
+      {
+        id: "q3",
+        en: "When you think about this, what feels harder to ignore?",
+        zh: "当你想到这件事时，哪种感觉更难忽视？",
+        options: [
+          {
+            en: "That something isn’t quite right",
+            zh: "好像哪里不太对劲",
+          },
+          {
+            en: "That I might be overthinking it",
+            zh: "也许是我想太多了",
+          },
+        ],
+      },
+      {
+        id: "q4",
+        en: "If nothing changed, what would bother you more?",
+        zh: "如果什么都不改变，哪一点更让你在意？",
+        options: [
+          {
+            en: "That I stayed where I am",
+            zh: "我一直停在原地",
+          },
+          {
+            en: "That I never really tried",
+            zh: "我从来没有真正尝试过",
+          },
+        ],
+      },
+      {
+        id: "q5",
+        en: "Which thought comes back more often?",
+        zh: "哪种想法更常反复出现？",
+        options: [
+          {
+            en: "Maybe I should just do it",
+            zh: "也许我应该去做",
+          },
+          {
+            en: "Maybe this isn’t the right time",
+            zh: "也许现在还不是时候",
+          },
+        ],
+      },
+      {
+        id: "q6",
+        en: "Be honest — what are you actually waiting for?",
+        zh: "说实话，你其实在等什么？",
+        options: [
+          {
+            en: "A clear sign",
+            zh: "一个明确的信号",
+          },
+          {
+            en: "The feeling to go away",
+            zh: "这种感觉自己消失",
+          },
+        ],
+      },
+    ];
+
+    const LOADING_TEXTS = [
+      {
+        en: "Consulting the crystal ball…",
+        zh: "拿出水晶球占卜中",
+      },
+      {
+        en: "Let me check the Book of Answers…",
+        zh: "先翻看一下答案之书",
+      },
+      {
+        en: "Alright… let’s flip a coin.",
+        zh: "实在不行抛硬币吧",
+      },
+    ];
+
+    const RESONANCE_LABEL = {
+      en: "Signal resonance:",
+      zh: "信号共振率：",
+    };
+
+    const BACK_LABEL = {
+      en: "Back",
+      zh: "返回",
+    };
+    const RESONANCE_NOTE = {
+      zh:
+        "它并不代表“答案正确率”；\n更像是你的选择与某种情绪倾向之间的契合程度。\n这个信号，明天也许会变得不一样。",
+      en:
+        "It does not represent accuracy,\nIt reflects how strongly your choices align with a certain emotional direction.\nThis signal may feel different tomorrow.",
+    };
+
+    const GHOST_WORDS = [
+      "hesitation",
+      "return",
+      "clarity",
+      "unfinished",
+      "gravity",
+      "echo",
+      "drift",
+    ];
+
+    const SUGGESTION_TITLE = { en: "[ Suggestion ]", zh: "[ 建议 ]" };
+
+    const REWIND_COPY = {
+      zh: {
+        line1: "如果当初选择的是另外一条路，不知道结局是否会更好；",
+        line2Before: "如果可以，我想让",
+        heat: "「时间回溯」",
+      },
+      en: {
+        line1: "If this had gone another way,\nwould it really feel different?",
+        line2Before: "If you could…\nwould you ",
+        heat: "go back",
+        line2After: "?",
+      },
+    };
+    const SUGGESTIONS = {
+      FLOW: {
+        en:
+          "Put everything down for a moment.\nWalk to the nearest coffee shop,\nbuy a coffee,\nand sit somewhere facing the window.\nDon’t think too hard.\nJust watch the world move for a while.",
+        zh:
+          "暂时先放下手中的一切，\n去旁边最近的咖啡店买一杯咖啡，\n找一个靠窗的位置坐下。\n别急着思考，\n先看看窗外的人和风景。",
+      },
+      DRIFT: {
+        en:
+          "Tonight doesn’t need a conclusion.\nGo somewhere quiet,\nput your phone away for a while,\nand let your thoughts wander without forcing them into answers.",
+        zh:
+          "今晚不一定非要得出答案。\n去一个安静一点的地方，\n暂时把手机收起来，\n别逼自己想明白什么。",
+      },
+      TENSION: {
+        en:
+          "You’ve been carrying this feeling for too long.\nGo outside.\nWalk longer than you planned to.\nSometimes the body notices things before the mind admits them.",
+        zh:
+          "你已经把这种感觉压了太久。\n出去走走吧，\n比原计划走得再远一点。\n有时候身体会比大脑更早意识到答案。",
+      },
+      PULL: {
+        en:
+          "Maybe stop asking for certainty.\nOpen the thing you keep avoiding.\nThe message, the tab, the application, the draft.\nYou probably already know which one.",
+        zh:
+          "也许你不需要继续等待确定性。\n打开那个你一直刻意回避的东西吧。\n可能是一条消息、\n一个页面、\n一份申请、\n或者一个没写完的草稿。\n你其实知道我在说哪个。",
+      },
+    };
+
+    const RESULT_FULL = {
+      en: {
+        DRIFT: `
+DRIFT
+
+This isn’t confusion — it’s unfinished.
+
+Nothing here has settled enough to become clear,
+and you’re still moving between possibilities,
+not fully choosing, not fully letting go.
+
+From the way you answered,
+it’s not that you don’t care.
+It’s that nothing has felt strong enough to hold onto.
+
+You don’t need an answer yet.
+Just notice what keeps quietly returning.
+`,
+        TENSION: `
+TENSION
+
+There’s already pressure here.
+
+Part of you is pushing forward,
+while another part keeps holding back.
+And the longer this stays unresolved,
+the heavier it feels.
+
+Your choices show a pattern:
+you’re not neutral — you’re conflicted.
+
+This isn’t about not knowing what to do.
+It’s about not wanting the cost that comes with either side.
+
+You don’t need to solve it right now.
+But pretending it isn’t there won’t make it lighter.
+`,
+        FLOW: `
+FLOW
+
+Not everything here needs to be forced.
+
+There’s no strong resistance in your answers,
+no urgency pushing you to change something immediately.
+
+That doesn’t mean everything is perfect —
+but it does mean you’re not stuck.
+
+Right now,
+this seems less like a decision point,
+and more like something that’s still unfolding.
+
+You don’t have to rush clarity.
+Just stay aware of where things are naturally going.
+`,
+        PULL: `
+PULL
+
+Something in you has already leaned.
+
+Not loudly, not clearly —
+but enough that it keeps coming back.
+
+From the way you answered,
+there’s a direction that feels slightly more real,
+even if you haven’t fully admitted it.
+
+This isn’t really about “what should I do”.
+
+It’s closer to:
+“am I ready to accept what I already know?”
+`,
+      },
+      zh: {
+        DRIFT: `
+DRIFT
+
+这不是迷茫，而是尚未成形。
+
+很多东西还没有沉淀下来，
+你在不同可能之间来回，
+既没有真正选择，也没有彻底放下。
+
+从你的选择来看，
+不是你不在意，
+而是没有哪一边足够坚定，让你停下来。
+
+你现在不需要答案。
+但可以留意，什么在反复出现。
+`,
+        TENSION: `
+TENSION
+
+这里已经有压力在了。
+
+一部分你在往前推，
+另一部分却在不断拉住自己。
+而这种状态拖得越久，就越沉重。
+
+从你的选择来看，
+你并不是没有想法，
+而是在拉扯。
+
+这不是“不知道该怎么做”，
+而是不愿意面对任何一边的代价。
+
+你不需要现在就解决。
+但忽视它，只会让它更重。
+`,
+        FLOW: `
+FLOW
+
+并不是所有事情都需要推动。
+
+从你的选择来看，
+没有明显的抗拒，
+也没有必须立刻改变的紧迫感。
+
+这不代表一切都很好，
+但至少说明，你没有被困住。
+
+现在，
+这更像是一个正在发展的过程，
+而不是一个必须立刻决定的节点。
+
+你不需要急着看清。
+只需要留意，它自然会走向哪里。
+`,
+        PULL: `
+PULL
+
+你内心已经有一点倾向了。
+
+不明显，不强烈，
+但足够让它反复出现。
+
+从你的选择来看，
+有一个方向对你来说更真实一些，
+只是你还没有完全承认。
+
+这其实已经不是
+“我该不该做”的问题。
+
+更像是：
+“我是否准备好承认我已经知道的答案？”
+`,
+      },
+    };
+
+    function getGuidedQuestions(lang) {
+      return QUESTIONS.map((q) => ({
+        id: q.id,
+        text: q[lang],
+        layout: q.layout || "default",
+        options: q.options.map((opt, optIdx) => ({
+          id: `o${optIdx}`,
+          label: opt[lang],
+        })),
+      }));
+    }
+
+    const SIGNALS = ["DRIFT", "TENSION", "FLOW", "PULL"];
+
+    const SCORE_MAP = {
+      // q1: category (4 options)
+      q1: {
+        // Family
+        o0: { TENSION: 1, PULL: 1 },
+        // Career
+        o1: { PULL: 1, TENSION: 1 },
+        // Love
+        o2: { PULL: 2, TENSION: 1 },
+        // Nothing really...
+        o3: { DRIFT: 2, FLOW: 1 },
+      },
+
+      // q3
+      // A: something isn't quite right -> +2 TENSION, +1 PULL
+      // B: overthinking -> +2 DRIFT, +1 FLOW
+      q3: {
+        o0: { TENSION: 2, PULL: 1 },
+        o1: { DRIFT: 2, FLOW: 1 },
+      },
+
+      // q4
+      // stayed where I am -> DRIFT+1, TENSION+1
+      // never really tried -> PULL+1, TENSION+1
+      q4: {
+        o0: { DRIFT: 1, TENSION: 1 },
+        o1: { PULL: 1, TENSION: 1 },
+      },
+
+      // q5
+      // just do it -> PULL+2, FLOW+1
+      // not right time -> DRIFT+1, TENSION+1
+      q5: {
+        o0: { PULL: 2, FLOW: 1 },
+        o1: { DRIFT: 1, TENSION: 1 },
+      },
+
+      // q6
+      // a clear sign -> PULL+1, DRIFT+1
+      // feeling to go away -> DRIFT+2, FLOW+1
+      q6: {
+        o0: { PULL: 1, DRIFT: 1 },
+        o1: { DRIFT: 2, FLOW: 1 },
+      },
+    };
+
+    function extractResultParts(resultText, signal) {
+      const raw = (resultText || "").replace(/\r\n/g, "\n");
+      const lines = raw.split("\n");
+      // drop leading empty lines
+      while (lines.length && lines[0].trim() === "") lines.shift();
+      // drop leading signal title line if present
+      if (lines.length && lines[0].trim() === signal) lines.shift();
+      // drop empties after title
+      while (lines.length && lines[0].trim() === "") lines.shift();
+      const core = lines.length ? lines[0].trim() : "";
+      const body = lines.slice(1).join("\n").replace(/^\n+/, "");
+      return { core, body };
+    }
+
+    function splitBodyParagraphs(bodyText) {
+      const t = (bodyText || "").replace(/\r\n/g, "\n").trim();
+      if (!t) return [];
+      const parts = t.split(/\n{2,}/g).map((p) => p.trim()).filter(Boolean);
+      return parts.length ? parts : [t];
+    }
+
+    function pickGhostWord() {
+      return GHOST_WORDS[Math.floor(Math.random() * GHOST_WORDS.length)];
+    }
+
+    function formatGhostWord(word) {
+      if (!word || typeof word !== "string") return "";
+      const w = word.trim();
+      if (!w) return "";
+      return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+    }
+
+    function pickResonancePct() {
+      return 68 + Math.floor(Math.random() * (94 - 68 + 1));
+    }
+
+    function deriveSignal(answers) {
+      const scores = { DRIFT: 0, TENSION: 0, FLOW: 0, PULL: 0 };
+
+      console.log("[FLOAT] selected answers:", answers);
+
+      for (const ans of answers) {
+        const add = SCORE_MAP?.[ans.questionId]?.[ans.optionId];
+        if (!add) {
+          console.log("[FLOAT] no score mapping for:", ans);
+          continue;
+        }
+
+        console.log("[FLOAT] scoring:", ans.questionId, ans.optionId, add);
+        for (const [signal, delta] of Object.entries(add)) {
+          scores[signal] = (scores[signal] || 0) + delta;
+        }
+        console.log("[FLOAT] scores now:", { ...scores });
+      }
+
+      // Determine final by highest score; tie-break stays calm/neutral.
+      const tieOrder = ["FLOW", "PULL", "TENSION", "DRIFT"];
+      const finalSignal = Object.entries(scores)
+        .sort((a, b) => {
+          if (b[1] !== a[1]) return b[1] - a[1];
+          return tieOrder.indexOf(a[0]) - tieOrder.indexOf(b[0]);
+        })[0][0];
+
+      console.log("[FLOAT] final scores:", scores);
+      console.log("[FLOAT] final signal:", finalSignal);
+
+      return finalSignal;
+    }
+
+    function App() {
+      const [lang, setLang] = useState("en");
+      const [phase, setPhase] = useState("intro"); // intro -> ready -> flow -> loading -> result
+      const panelRef = useRef(null);
+      const [step, setStep] = useState(0);
+      const [isTransitioning, setIsTransitioning] = useState(false);
+      const [animKey, setAnimKey] = useState(0);
+      const [answers, setAnswers] = useState([]);
+      const [loadingText, setLoadingText] = useState(LOADING_TEXTS[0].en);
+      const [loadingVisible, setLoadingVisible] = useState(true);
+      const [loadingIdx, setLoadingIdx] = useState(0);
+      const [finalSignal, setFinalSignal] = useState("");
+      const [ghostWord, setGhostWord] = useState("");
+      const [resonancePct, setResonancePct] = useState(0);
+      const [introLeaving, setIntroLeaving] = useState(false);
+      const [introVisible, setIntroVisible] = useState(true);
+      const [flowActive, setFlowActive] = useState(false);
+      const t = TEXT[lang];
+      const guidedQuestions = getGuidedQuestions(lang);
+
+    const beginFromIntro = () => {
+      if (phase !== "intro" || introLeaving) return;
+      setIntroLeaving(true);
+
+      setTimeout(() => {
+       setIntroVisible(false);
+       setPhase("flow");
+       setStep(0);
+       setAnimKey((k) => k + 1);
+     }, 500);
+};
+
+      useEffect(() => {
+        if (phase !== "flow") {
+          setFlowActive(false);
+          return;
+        }
+        const raf = requestAnimationFrame(() => setFlowActive(true));
+        return () => cancelAnimationFrame(raf);
+      }, [phase]);
+
+      useEffect(() => {
+        if (phase !== "flow") return;
+        const t = setTimeout(() => {
+          const el = panelRef.current;
+          if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+        }, 60);
+        return () => clearTimeout(t);
+      }, [phase]);
+
+      useEffect(() => {
+        if (phase !== "loading") return;
+        setLoadingIdx(0);
+        setLoadingText(LOADING_TEXTS[0][lang]);
+        setLoadingVisible(true);
+
+        // 逐条轮播，每条约 1.6s；中间做一次柔和淡出/淡入
+        const interval = setInterval(() => {
+          setLoadingVisible(false);
+          setTimeout(() => {
+            setLoadingIdx((prev) => {
+              const next = (prev + 1) % LOADING_TEXTS.length;
+              setLoadingText(LOADING_TEXTS[next][lang]);
+              return next;
+            });
+            setLoadingVisible(true);
+          }, 420);
+        }, 1600);
+
+        const done = setTimeout(() => {
+          clearInterval(interval);
+          const signal = deriveSignal(answers);
+          setFinalSignal(signal);
+          setGhostWord(formatGhostWord(pickGhostWord()));
+          setResonancePct(pickResonancePct());
+          setPhase("result");
+        }, 1600 * LOADING_TEXTS.length + 700);
+
+        return () => {
+          clearInterval(interval);
+          clearTimeout(done);
+        };
+      }, [phase, answers, lang]);
+
+      useEffect(() => {
+        if (phase !== "loading") return;
+        setLoadingText(LOADING_TEXTS[loadingIdx][lang]);
+      }, [lang, phase, loadingIdx]);
+
+      const rewind = () => {
+        // 回到最初首页：只有 FLOAT
+        // 回到最初首页：只有 FLOAT
+        setPhase("intro");
+        setStep(0);
+        setIsTransitioning(false);
+        setAnimKey((k) => k + 1);
+        setAnswers([]);
+        setLoadingText(LOADING_TEXTS[0][lang]);
+        setLoadingIdx(0);
+        setLoadingVisible(true);
+        setFinalSignal("");
+        setGhostWord("");
+        setResonancePct(0);
+        setIntroLeaving(false);
+        setIntroVisible(true);
+        setFlowActive(false);
+      };
+
+      const currentQuestion = guidedQuestions[step] || null;
+
+      const backFromQuestion = () => {
+        if (isTransitioning) return;
+        setIsTransitioning(true);
+        setTimeout(() => {
+          if (step <= 0) {
+            setPhase("intro");
+            setStep(0);
+            setAnswers([]);
+            setFinalSignal("");
+            setGhostWord("");
+            setResonancePct(0);
+            setIntroLeaving(false);
+            setIntroVisible(true);
+            setFlowActive(false);
+          } else {
+            setStep((s) => Math.max(0, s - 1));
+            setAnswers((prev) => prev.slice(0, -1));
+          }
+          setAnimKey((k) => k + 1);
+          setIsTransitioning(false);
+        }, 520);
+      };
+
+      const selectOption = (optionId, label) => {
+        if (!currentQuestion || isTransitioning) return;
+        if (currentQuestion.id === "q1" && optionId === "o3") {
+          setIsTransitioning(true);
+          setTimeout(() => {
+            setPhase("intro");
+            setStep(0);
+            setAnswers([]);
+            setAnimKey((k) => k + 1);
+            setIsTransitioning(false);
+            setFinalSignal("");
+            setGhostWord("");
+            setResonancePct(0);
+            setIntroLeaving(false);
+            setIntroVisible(true);
+            setFlowActive(false);
+          }, 620);
+          return;
+        }
+        setIsTransitioning(true);
+        setAnswers((prev) => [...prev, { questionId: currentQuestion.id, optionId, label }]);
+        setTimeout(() => {
+          const isLast = step >= guidedQuestions.length - 1;
+          if (isLast) {
+            setPhase("loading");
+          } else {
+            setStep((s) => Math.min(s + 1, guidedQuestions.length));
+          }
+          setAnimKey((k) => k + 1);
+          setIsTransitioning(false);
+        }, 650);
+      };
+
+      return (
+        <div className="fixed inset-0 overflow-hidden">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            className="fixed inset-0 w-full h-full object-cover video-background"
+          >
+            <source src="shui.mp4" type="video/mp4" />
+          </video>
+          <div className="fixed inset-0 bg-black/30 z-[-1]"></div>
+
+          <div
+            className="relative h-screen w-screen fade-in-slow"
+            onClick={phase === "intro" ? beginFromIntro : undefined}
+          >
+            <div className="absolute top-4 right-4 z-20">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLang((prev) => (prev === "en" ? "zh" : "en"));
+                }}
+                className="option-line rounded-full px-3 py-1 text-white/85 clickable-text"
+              >
+                {lang === "en" ? "EN / 中文" : "中文 / EN"}
+              </button>
+            </div>
+            {/* Intro hero (isolated screen) */}
+            {introVisible && phase === "intro" ? (
+              <div className={["hero-screen", introLeaving ? "is-leaving" : ""].join(" ")}>
+                <div className="hero-center">
+                  <div className="hero-title float-brand-outline font-thin leading-none select-none">
+                    FLOAT
+                  </div>
+                  <div className="intro-tap-hint">
+                    {lang === "zh" ? "点击任意位置开始" : "Tap anywhere to begin"}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {/* flow container (only renders when active; no layout bleed) */}
+            {phase === "flow" ? (
+              <div className={["flow-stage", flowActive ? "is-active" : ""].join(" ")}>
+                <div ref={panelRef} className="flow-stack">
+                  <h1 className="flow-headline intro-question-in">{t.intro}</h1>
+                  <div className="flow-card-wrap">
+                    {currentQuestion ? (
+                    <div
+                      key={animKey}
+                      className={[
+                        "glass-panel flow-card shadow-2xl",
+                        isTransitioning ? "fade-swap-out" : "fade-swap-in",
+                      ].join(" ")}
+                    >
+                      <button
+                        type="button"
+                        className="question-back"
+                        onClick={backFromQuestion}
+                        aria-label={BACK_LABEL[lang]}
+                      >
+                        <span className="question-back-arrow">←</span>
+                        <span className="question-back-label">{BACK_LABEL[lang]}</span>
+                      </button>
+                      <div className="flow-question text-white/85 text-2xl md:text-3xl font-extralight tracking-wide leading-relaxed">
+                        {currentQuestion.text}
+                      </div>
+                      {/* 选项布局按题型微调，不改变整体卡片布局 */}
+                      {currentQuestion.layout === "grid4" ? (
+                        <div className="flow-options flow-options--grid">
+                          {currentQuestion.options.map((opt) => (
+                            <div
+                              key={opt.id}
+                              className="option-line flow-option text-white/80 text-xl font-extralight tracking-wide clickable-text"
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => selectOption(opt.id, opt.label)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") selectOption(opt.id, opt.label);
+                              }}
+                            >
+                              {opt.label}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flow-options flow-options--list">
+                          {currentQuestion.options.map((opt) => (
+                            <div
+                              key={opt.id}
+                              className="option-line flow-option text-white/80 text-xl font-extralight tracking-wide clickable-text"
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => selectOption(opt.id, opt.label)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") selectOption(opt.id, opt.label);
+                              }}
+                            >
+                              {opt.label}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    ) : (
+                    <div key={animKey} className="glass-panel flow-card shadow-2xl fade-swap-in">
+                      <div className="text-white/70 text-2xl md:text-3xl font-extralight tracking-wide leading-snug">
+                        {t.endTitle}
+                      </div>
+                      <div className="mt-4 text-white/45 text-lg font-extralight tracking-wide">
+                        {t.endSub}
+                      </div>
+                    </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {phase === "loading" && (
+              <div className="absolute inset-0 flex items-center justify-center px-6">
+                <div className="text-center fade-swap-in">
+                  <div
+                    className={[
+                      "text-white/85 text-4xl md:text-5xl font-extralight tracking-wide loading-fade",
+                      loadingVisible ? "is-visible" : "is-hidden",
+                    ].join(" ")}
+                  >
+                    {loadingText}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {phase === "result" && finalSignal && (
+              <div className="absolute inset-0 overflow-y-auto overflow-x-hidden flex justify-center">
+                <div className="fade-swap-in result-scene text-white w-full">
+                  <h2 className="result-title">{t.signals[finalSignal] || finalSignal}</h2>
+
+                  {(() => {
+                    const { core, body } = extractResultParts(RESULT_FULL[lang][finalSignal], finalSignal);
+                    const paragraphs = splitBodyParagraphs(body);
+                    return (
+                      <>
+                        <div className="result-core">{core}</div>
+                        <div className="result-stack">
+                          {ghostWord ? <div className="result-ghost">{ghostWord}</div> : null}
+                          <div className="result-dialogue">
+                            <div className="result-main-copy result-body">
+                              {paragraphs.map((p, i) => (
+                                <p key={i}>{p}</p>
+                              ))}
+                            </div>
+                            <div className="resonance-side">
+                              <div className="resonance-info-wrap">
+                                <div className="resonance-card">
+                                  <div className="resonance-pct">{resonancePct}%</div>
+                                  <div className="resonance-inline-label">
+                                    {RESONANCE_LABEL[lang]} {resonancePct}%
+                                  </div>
+                                </div>
+                                <div className="resonance-static-note">{RESONANCE_NOTE[lang]}</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+
+                  <div className="suggestion-card">
+                    <div className="suggestion-label">{SUGGESTION_TITLE[lang]}</div>
+                    <div className="suggestion-text">
+                      {(SUGGESTIONS[finalSignal] && SUGGESTIONS[finalSignal][lang]) || ""}
+                    </div>
+                  </div>
+
+                  <div className="rewind-wrap text-white">
+                    <div className="rewind-line whitespace-pre-line">{REWIND_COPY[lang].line1}</div>
+                    <div className="rewind-line whitespace-pre-line">
+                      {REWIND_COPY[lang].line2Before}
+                      <span
+                        className={lang === "zh" ? "rewind-heat rewind-heat--zh" : "rewind-heat rewind-heat--en"}
+                        role="button"
+                        tabIndex={0}
+                        onClick={rewind}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            rewind();
+                          }
+                        }}
+                      >
+                        {REWIND_COPY[lang].heat}
+                      </span>
+                      {lang === "en" && REWIND_COPY.en.line2After ? REWIND_COPY.en.line2After : ""}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<App />, document.getElementById("root"));
+  </script>
+</body>
+</html>
+
